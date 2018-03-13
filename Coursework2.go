@@ -2,9 +2,9 @@
 
 // Theory of Computation Assignment 1 Section 1
 
-// NAME:
+// NAME: Jamie Sweeney
 
-// STUDENT NUMBER:
+// STUDENT NUMBER: 2137284s
 
 ///////////////////////////////////////////////////////
 
@@ -22,11 +22,11 @@ type BoolPair struct { t chan V; f chan V }
 type Bool = chan BoolPair
 
 func True(x Bool) {
-  p := <- x ; p.t <- V{} 
+  p := <- x ; p.t <- V{}
 }
 
 func False(x Bool) {
-  p := <- x ; p.f <- V{} 
+  p := <- x ; p.f <- V{}
 }
 
 func Not(x Bool, y Bool) {
@@ -36,7 +36,7 @@ func Not(x Bool, y Bool) {
   select {
     case <- t: p.f <- V{}
     case <- f: p.t <- V{}
-  } 
+  }
 }
 
 func decodeBool(x Bool) bool {
@@ -68,10 +68,14 @@ func S(n func(Nat)) func(Nat) {
   }
 }
 
+
+// ////////////////////////////////////////////////////////////////////////////////////////////////////
+// Question 1
+// ////////////////////////////////////////////////////////////////////////////////////////////////////
+// Adds one to a natual number
 func Inc(x Nat, y Nat) {
-  /////////////////////////////////////////
-  // Question 1: complete this definition
-  /////////////////////////////////////////
+  p := <- x
+  p.s <- y
 }
 
 func decodeNat(x Nat) int {
@@ -138,18 +142,65 @@ func Even(trigger chan EvenTrigger) {
   }
 }
 
+// ////////////////////////////////////////////////////////////////////////////////////////////////////
 // Question 4: define the function Length
+// ////////////////////////////////////////////////////////////////////////////////////////////////////
+type LengthTrigger struct { n Nat; l List }
 
+func Length( trigger chan LengthTrigger) {
+  p := <- trigger
+  v := make(chan V)
+  t := make(chan NatListPair)
+  p.l <- ListPair{ v, t }
+  select {
+    case <- v:
+      go Z(p.n)
+    case nlp := <- t:
+      nn := make(Nat)
+      go Inc(p.n,nn)
+      go Length(trigger)
+      trigger <- LengthTrigger{ nn, nlp.t }
+  }
+}
 // Main
 
 func main() {
 
-  ////////////////////////////////////////////////////////////////////////////////////////////////////
+  // ////////////////////////////////////////////////////////////////////////////////////////////////////
   // Question 2: write code to check that 1 + 1 = 2
-  //
+  // ////////////////////////////////////////////////////////////////////////////////////////////////////
+  x := make(Nat)
+  y := make(Nat)
+
+  // One
+  go S(Z)(y)
+
+  // Add One
+  go Inc(x, y)
+
+  // Show two
+  fmt.Println(decodeNat(x))
+
+  // ////////////////////////////////////////////////////////////////////////////////////////////////////
   // Question 3: write code to construct a list containing 0, 1 and 2, and use decodeList to print it.
-  //
+  // ////////////////////////////////////////////////////////////////////////////////////////////////////
+  lis := make(List)
+
+  // List
+  go Cons(Z, Cons(S(Z), Cons(S(S(Z)), Nil))) (lis)
+
+  // Decode to Go array
+  fmt.Println(decodeList(lis))
+
+  // ////////////////////////////////////////////////////////////////////////////////////////////////////
   // Question 5: write code to check that the length of this list is 3.
   ////////////////////////////////////////////////////////////////////////////////////////////////////
 
+  na := make(Nat)
+  li := make(List)
+  ltrigger := make(chan LengthTrigger)
+  go Length(ltrigger)
+  ltrigger <- LengthTrigger{na, li}
+  go Cons(Z, Cons(S(Z), Cons(S(S(Z)), Nil))) (li)
+  fmt.Println(decodeNat(na))
 }
